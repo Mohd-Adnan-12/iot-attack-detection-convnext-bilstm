@@ -113,7 +113,7 @@ Output: [DDoS | DoS | Normal | Recon | Theft]
 
 ## ⚙️ Preprocessing
 
-The following steps were applied in `Mini_Project_3_2__1_.ipynb`:
+The following steps were applied in `iot_attack_detection_ConvNeXt_BiLSTM.ipynb`:
 
 | Step | Method | Reason |
 |------|--------|--------|
@@ -283,17 +283,6 @@ The app (`app.py`) provides a dark-themed interface with 3 tabs:
 - Reference table explaining all 25 features
 - Full model architecture diagram
 
-### Sample Datasets for Demo
-
-| File | Dominant Class | Records |
-|------|---------------|---------|
-| `bot_iot_test_data.csv` | All classes | 733,705 |
-| `dataset_dos_dominant.csv` | DoS | ~110 |
-| `dataset_recon_dominant.csv` | Reconnaissance | ~110 |
-| `dataset_normal_dominant.csv` | Normal | ~108 |
-| `pure_normal.csv` | Normal only | 100 |
-
----
 
 ## 📊 Baseline Comparison
 
