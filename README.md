@@ -181,13 +181,7 @@ iot-attack-detection-convnext-bilstm/
 │
 ├── iot_attack_model_v2.keras      # Saved trained model (download from Drive)
 ├── scaler.pkl                     # Saved StandardScaler (download from Drive)
-│
-├── bot_iot_test_data.csv          # Full test dataset (733,705 records)
-├── dataset_dos_dominant.csv       # Sample: DoS dominant
-├── dataset_recon_dominant.csv     # Sample: Reconnaissance dominant
-├── dataset_normal_dominant.csv    # Sample: Normal dominant
-└── pure_normal.csv                # Sample: Pure Normal traffic (100 records)
-```
+
 
 ---
 
