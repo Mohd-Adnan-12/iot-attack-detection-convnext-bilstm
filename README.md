@@ -1,12 +1,13 @@
 # 🛡️ IoT Network Attack Detection using ConvNeXt + Bidirectional LSTM
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python)
-![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange?logo=tensorflow)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.20-orange?logo=tensorflow)
 ![Accuracy](https://img.shields.io/badge/Accuracy-97.96%25-brightgreen)
 ![Dataset](https://img.shields.io/badge/Dataset-BoT--IoT%20(UNSW)-blueviolet)
+![Streamlit](https://img.shields.io/badge/UI-Streamlit-ff4b4b?logo=streamlit)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
-> A hybrid deep learning-based Intrusion Detection System (IDS) that protects IoT environments from network attacks using **ConvNeXt** for spatial feature extraction and **Bidirectional LSTM** for temporal sequence modeling.
+> A hybrid deep learning-based Intrusion Detection System (IDS) for IoT environments using **ConvNeXt** for spatial feature extraction and **Bidirectional LSTM** for temporal sequence modeling — trained on 3.6 million real IoT network flows.
 
 ---
 
@@ -14,11 +15,14 @@
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Dataset](#dataset)
+- [Preprocessing](#preprocessing)
 - [Results](#results)
+- [Project Files](#project-files)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Project Structure](#project-structure)
+- [Streamlit Web App](#streamlit-web-app)
 - [Baseline Comparison](#baseline-comparison)
+- [Known Limitations](#known-limitations)
 - [Future Work](#future-work)
 - [References](#references)
 
@@ -26,13 +30,13 @@
 
 ## 🔍 Overview
 
-IoT devices are resource-constrained and lack built-in security, making them attractive targets for attackers. Traditional signature-based IDS cannot detect zero-day or evolving threats.
+IoT devices are lightweight and resource-constrained, making them highly vulnerable to network attacks. Traditional signature-based IDS solutions fail against zero-day and evolving threats.
 
-This project implements an intelligent, automated network attack detection system that:
-- Detects **5 attack types**: DDoS, DoS, Reconnaissance, Theft, and Normal traffic
-- Trains on **3.6 million** real IoT network flow records
+This project builds an end-to-end intelligent attack detection pipeline that:
+- Classifies network traffic into **5 categories**: DDoS, DoS, Reconnaissance, Theft, and Normal
+- Trains on **~3.6 million** real BoT-IoT network flow records using Google Colab (T4 GPU)
 - Achieves **97.96% overall accuracy** on 733,705 test records
-- Provides a **Streamlit web interface** for real-time batch predictions
+- Provides a **dark-themed Streamlit web interface** for batch CSV predictions and manual input
 
 ---
 
@@ -59,32 +63,36 @@ Output: [DDoS | DoS | Normal | Recon | Theft]
 ```
 
 ### Why ConvNeXt + BiLSTM?
+
 | Component | Role |
 |-----------|------|
-| **ConvNeXt Blocks** | Extract spatial correlations among 25 network flow features |
-| **Bidirectional LSTM** | Capture sequential attack patterns across multiple flows (both directions) |
-| **Hybrid Fusion** | Combines spatial + temporal representations for superior detection |
+| **ConvNeXt Blocks** | Extract local spatial correlations among 25 network flow features |
+| **Bidirectional LSTM** | Capture sequential attack patterns in both forward and backward directions |
+| **Hybrid Fusion** | Combines spatial + temporal representations for superior accuracy |
 
 ### Training Configuration
+
 | Parameter | Value |
 |-----------|-------|
 | Optimizer | Adam (lr = 0.0003) |
 | Loss Function | Sparse Categorical Crossentropy |
-| Epochs | 10 (with Early Stopping, patience=3) |
+| Epochs | 10 |
+| Early Stopping | patience = 3 (monitors val_loss) |
 | Batch Size | 512 |
 | Platform | Google Colab (T4 GPU) |
+| Training Time | ~30–45 minutes |
 
 ---
 
 ## 📊 Dataset
 
-**BoT-IoT** — Bot Internet of Things Dataset  
-Source: University of New South Wales (UNSW), Canberra  
-Kaggle: [`vigneshvenkateswaran/bot-iot`](https://www.kaggle.com/datasets/vigneshvenkateswaran/bot-iot)
+**BoT-IoT** — Bot Internet of Things Dataset
+**Source:** University of New South Wales (UNSW), Canberra
+**Kaggle:** [`vigneshvenkateswaran/bot-iot`](https://www.kaggle.com/datasets/vigneshvenkateswaran/bot-iot)
 
 | Property | Details |
 |----------|---------|
-| Total Records | ~72 million network flows |
+| Total Raw Records | ~72 million network flows |
 | After 5% Sampling | ~3.6 million records |
 | Training Set (80%) | ~2.9 million records |
 | Test Set (20%) | 733,705 records |
@@ -92,27 +100,59 @@ Kaggle: [`vigneshvenkateswaran/bot-iot`](https://www.kaggle.com/datasets/vignesh
 | Attack Classes | 5 (DDoS, DoS, Normal, Reconnaissance, Theft) |
 
 ### Class Distribution
-| Class | Count | % | Challenge |
-|-------|-------|---|-----------|
+
+| Class | Approx. Count | Percentage | Challenge |
+|-------|--------------|-----------|-----------|
 | DDoS | ~1,926,655 | 52.5% | Dominant class |
-| DoS | ~1,650,270 | 45.0% | Similar to DDoS |
+| DoS | ~1,650,270 | 45.0% | Similar patterns to DDoS |
 | Reconnaissance | ~91,010 | 2.5% | Minority class |
 | Normal | ~500 | 0.01% | Very rare |
 | Theft | ~90 | 0.001% | Extremely imbalanced |
 
 ---
 
+## ⚙️ Preprocessing
+
+The following steps were applied in `Mini_Project_3_2__1_.ipynb`:
+
+| Step | Method | Reason |
+|------|--------|--------|
+| Data Loading | Chunked reading (200K rows), 5% stratified sampling by subcategory | Handle 72M records without RAM overflow |
+| Column Removal | Dropped pkSeqID, stime, ltime, saddr, daddr, smac, dmac, attack, subcategory | Remove identifiers and leaky labels |
+| Missing Values | Replace Inf → NaN, fill NaN → 0 | Prevent training errors |
+| Categorical Encoding | LabelEncoder on proto, state, flgs, soui, doui, sco, dco | Convert strings to numeric |
+| Label Encoding | LabelEncoder on target column (category) | DDoS=0, DoS=1, Normal=2, Recon=3, Theft=4 |
+| Train/Test Split | 80/20 stratified split (random_state=42) | Maintain class distribution |
+| Normalization | StandardScaler — fit on train, transform both | Normalize to mean=0, std=1 |
+| Reshape | (samples, 25) → (samples, 25, 1) | Required for Conv1D input |
+
+### 25 Selected Features
+
+```
+flgs    proto   sport   dport   pkts    bytes   state   seq
+dur     mean    stddev  sum     min     max     soui    doui
+sco     dco     spkts   dpkts   sbytes  dbytes  rate    srate
+drate
+```
+
+---
+
 ## 📈 Results
 
 ### Overall Performance
+
 | Metric | Value |
 |--------|-------|
 | **Overall Accuracy** | **97.96%** |
 | Correct Predictions | 718,723 / 733,705 |
 | Training Accuracy | ~98% |
 | Validation Accuracy | ~98% |
+| Weighted Precision | 0.98 |
+| Weighted Recall | 0.98 |
+| Weighted F1-Score | 0.98 |
 
 ### Per-Class Performance
+
 | Class | Precision | Recall | F1-Score | Accuracy |
 |-------|-----------|--------|----------|----------|
 | DDoS | 0.98 | 0.98 | 0.98 | 98.2% |
@@ -122,96 +162,136 @@ Kaggle: [`vigneshvenkateswaran/bot-iot`](https://www.kaggle.com/datasets/vignesh
 | Theft | 0.00 | 0.00 | 0.00 | 0.0% ⚠️ |
 | **Weighted Avg** | **0.98** | **0.98** | **0.98** | **97.96%** |
 
-> ⚠️ Theft detection failed due to extreme class imbalance (only 18 test samples). Future work includes SMOTE oversampling to address this.
+> ⚠️ **Theft detection is 0%** due to extreme class imbalance — only 18 Theft test samples out of 733,705 total. SMOTE oversampling is planned as future work.
 
 ---
 
-## ⚙️ Installation
+## 📁 Project Files
 
+```
+iot-attack-detection-convnext-bilstm/
+│
+├── Mini_Project_3_2__1_.ipynb     # Google Colab training notebook
+│                                  # (data loading, preprocessing,
+│                                  #  model training, saving)
+│
+├── app.py                         # Streamlit web interface
+│                                  # (batch CSV prediction,
+│                                  #  manual input, results view)
+│
+├── iot_attack_model_v2.keras      # Saved trained model (download from Drive)
+├── scaler.pkl                     # Saved StandardScaler (download from Drive)
+│
+├── bot_iot_test_data.csv          # Full test dataset (733,705 records)
+├── dataset_dos_dominant.csv       # Sample: DoS dominant
+├── dataset_recon_dominant.csv     # Sample: Reconnaissance dominant
+├── dataset_normal_dominant.csv    # Sample: Normal dominant
+└── pure_normal.csv                # Sample: Pure Normal traffic (100 records)
+```
+
+---
+
+## 🔧 Installation
+
+### 1. Clone the Repository
 ```bash
-# Clone the repository
 git clone https://github.com/YOUR_USERNAME/iot-attack-detection-convnext-bilstm.git
 cd iot-attack-detection-convnext-bilstm
-
-# Install dependencies
-pip install -r requirements.txt
 ```
 
-### Requirements (`requirements.txt`)
+### 2. Install Dependencies
+```bash
+pip3 install tensorflow streamlit scikit-learn pandas numpy joblib matplotlib
 ```
-tensorflow>=2.10
-scikit-learn>=1.0
-pandas>=1.3
-numpy>=1.21
-streamlit>=1.15
-matplotlib>=3.5
-seaborn>=0.11
-```
+
+### 3. Download Model Files from Google Drive
+Download these two files and place them in the project folder:
+- `iot_attack_model_v2.keras`
+- `scaler.pkl`
 
 ---
 
 ## 🚀 Usage
 
-### Training the Model
+### Step 1 — Train the Model (Google Colab)
+Open `Mini_Project_3_2__1_.ipynb` in Google Colab and run all cells.
+
 ```python
-# Run in Google Colab (recommended for GPU)
-python train.py
+# The notebook will:
+# 1. Download BoT-IoT dataset via kagglehub
+# 2. Preprocess and sample 5% of data (~3.6M records)
+# 3. Train ConvNeXt + BiLSTM for 10 epochs
+# 4. Save model and scaler to Google Drive
+
+model.save('/content/drive/MyDrive/iot_attack_model_v2.keras')
+joblib.dump(scaler, '/content/drive/MyDrive/scaler.pkl')
 ```
 
-### Running the Streamlit App
+> ⏱️ Training takes approximately 30–45 minutes on Google Colab T4 GPU.
+
+### Step 2 — Run the Streamlit App (Local)
 ```bash
-streamlit run app.py
+cd Desktop/Mini
+python3 -m streamlit run app.py
 ```
 
-The web interface supports:
-- **CSV Batch Prediction** — Upload a CSV of network flows
-- **Manual Input** — Enter feature values manually
-- **Accuracy Comparison** — View model vs baseline comparison
-- **Download Results** — Export predictions as CSV
+App opens at: **http://localhost:8501**
 
-### Making Predictions
+### Step 3 — Make Predictions
 ```python
-import numpy as np
-import tensorflow as tf
-import joblib
+from tensorflow.keras.models import load_model
+import joblib, numpy as np
 
-model = tf.keras.models.load_model("convnext_bilstm_model.h5")
+model  = load_model("iot_attack_model_v2.keras", compile=False)
 scaler = joblib.load("scaler.pkl")
-label_encoder = joblib.load("label_encoder.pkl")
 
-# Preprocess your input (25 features)
-X = scaler.transform(your_features)
-X = X.reshape(-1, 25, 1)
+FEATURES = ['flgs','proto','sport','dport','pkts','bytes','state',
+            'seq','dur','mean','stddev','sum','min','max',
+            'soui','doui','sco','dco','spkts','dpkts',
+            'sbytes','dbytes','rate','srate','drate']
 
-pred = model.predict(X)
-label = label_encoder.inverse_transform([np.argmax(pred)])
-print(f"Predicted Attack: {label[0]}")
+LABELS = {0:'DDoS', 1:'DoS', 2:'Normal', 3:'Reconnaissance', 4:'Theft'}
+
+X = scaler.transform(your_dataframe[FEATURES])
+X = X.reshape(-1, 25, 1).astype('float32')
+
+preds = model.predict(X)
+labels = [LABELS[np.argmax(p)] for p in preds]
 ```
 
 ---
 
-## 📁 Project Structure
+## 🖥️ Streamlit Web App
 
-```
-iot-attack-detection-convnext-bilstm/
-│
-├── train.py                  # Model training script
-├── app.py                    # Streamlit web interface
-├── preprocess.py             # Data loading & preprocessing pipeline
-├── model.py                  # ConvNeXt + BiLSTM architecture definition
-├── evaluate.py               # Evaluation & metrics generation
-│
-├── models/
-│   ├── convnext_bilstm_model.h5   # Saved trained model
-│   ├── scaler.pkl                 # StandardScaler
-│   └── label_encoder.pkl          # LabelEncoder
-│
-├── notebooks/
-│   └── ConvNeXt_BiLSTM_IoT.ipynb  # Google Colab training notebook
-│
-├── requirements.txt
-└── README.md
-```
+The app (`app.py`) provides a dark-themed interface with 3 tabs:
+
+### Tab 1 — 📂 CSV Prediction
+- Upload any CSV with the 25 model features
+- Runs batch prediction on all records
+- Shows dominant attack type with severity level
+- Displays attack distribution table and bar chart
+- Shows accuracy vs actual labels (if `actual_category` column present)
+- Download results as CSV
+
+### Tab 2 — 🔍 Manual Input
+- Enter all 25 feature values manually
+- Load 5 presets: Normal, DDoS, DoS, Reconnaissance, Theft
+- Shows prediction with confidence score
+- Displays all 5 class probability scores
+
+### Tab 3 — 📋 Feature Guide
+- Reference table explaining all 25 features
+- Full model architecture diagram
+
+### Sample Datasets for Demo
+
+| File | Dominant Class | Records |
+|------|---------------|---------|
+| `bot_iot_test_data.csv` | All classes | 733,705 |
+| `dataset_dos_dominant.csv` | DoS | ~110 |
+| `dataset_recon_dominant.csv` | Reconnaissance | ~110 |
+| `dataset_normal_dominant.csv` | Normal | ~108 |
+| `pure_normal.csv` | Normal only | 100 |
 
 ---
 
@@ -227,26 +307,49 @@ iot-attack-detection-convnext-bilstm/
 | Standard CNN + LSTM | Hybrid DL | 96.5% |
 | **ConvNeXt + BiLSTM (Ours)** | **Hybrid DL** | **97.96% ✅** |
 
-Our model outperforms Random Forest by **+5.66%** and standard CNN+LSTM by **+1.46%**.
+Our model outperforms:
+- Random Forest by **+5.66%**
+- Standard CNN+LSTM by **+1.46%**
+- CNN only by **+2.86%**
+
+---
+
+## ⚠️ Known Limitations
+
+| Limitation | Description |
+|-----------|-------------|
+| **Class Imbalance** | Theft has only 18 test samples → 0% detection accuracy |
+| **No SMOTE** | Class balancing was not applied during training |
+| **Feature Mismatch** | Wireshark exports packet-level data; model needs flow-level features (mean, stddev, soui, etc.) — direct live capture not supported |
+| **IoT-Specific** | Trained on IoT traffic; may not generalize well to enterprise networks |
 
 ---
 
 ## 🔮 Future Work
 
-- **SMOTE Oversampling** — Fix Theft detection (currently 0%) using synthetic data generation
-- **Real-time Detection** — Integrate CICFlowMeter/Zeek for live network flow extraction
-- **Edge Deployment** — Quantize and deploy on Raspberry Pi for on-device IoT protection
+- **SMOTE Oversampling** — Generate synthetic Theft and Normal samples to fix class imbalance
+- **Real-time Detection** — Integrate CICFlowMeter or Zeek for live Wireshark-based flow extraction
+- **Edge Deployment** — Quantize and deploy lightweight model on Raspberry Pi for on-device IoT protection
 - **Federated Learning** — Train across distributed IoT devices without sharing raw data
-- **Transformer Models** — Explore BERT-based architectures for network traffic
-- **Explainability** — Add SHAP values to identify which features trigger detection
+- **Transformer Models** — Explore BERT-based architectures for network traffic analysis
+- **Explainability** — Add SHAP values to identify which features triggered each attack detection
 
 ---
 
 ## 📚 References
 
-1. Koroniotis et al. (2019). *Towards the Development of Realistic Botnet Dataset in the IoT for Network Forensic Analytics: Bot-IoT Dataset.* Future Generation Computer Systems.
-2. Liu et al. (2022). *A ConvNet for the 2020s (ConvNeXt).* IEEE/CVF CVPR.
-3. Hochreiter & Schmidhuber (1997). *Long Short-Term Memory.* Neural Computation.
+1. N. Koroniotis, N. Moustafa, E. Sitnikova, and B. Turnbull, "Towards the Development of Realistic Botnet Dataset in the Internet of Things for Network Forensic Analytics: Bot-IoT Dataset," *Future Generation Computer Systems*, vol. 100, pp. 779–796, 2019.
+2. Z. Liu et al., "A ConvNet for the 2020s (ConvNeXt)," in *Proc. IEEE/CVF CVPR*, pp. 11976–11986, 2022.
+3. S. Hochreiter and J. Schmidhuber, "Long Short-Term Memory," *Neural Computation*, vol. 9, no. 8, pp. 1735–1780, 1997.
+4. N. Moustafa and J. Slay, "UNSW-NB15: A Comprehensive Data Set for Network Intrusion Detection Systems," in *Proc. MilCIS*, 2015.
+5. A. A. Diro and N. Chilamkurti, "Distributed Attack Detection Scheme Using Deep Learning Approach for Internet of Things," *Future Generation Computer Systems*, vol. 82, pp. 761–768, 2018.
+6. R. Vinayakumar et al., "Deep Learning Approach for Intelligent Intrusion Detection System," *IEEE Access*, vol. 7, pp. 41525–41550, 2019.
+7. C. Yin, Y. Zhu, J. Fei, and X. He, "A Deep Learning Approach for Intrusion Detection Using Recurrent Neural Networks," *IEEE Access*, vol. 5, pp. 21954–21961, 2017.
+8. M. Ge et al., "Deep Learning-Based Intrusion Detection for IoT Networks," in *Proc. IEEE PRDC*, pp. 256–265, 2019.
+9. N. Moustafa, J. Hu, and J. Slay, "A Holistic Review of Network Anomaly Detection Systems," *Journal of Network and Computer Applications*, vol. 128, pp. 33–55, 2019.
+10. Y. Mirsky et al., "Kitsune: An Ensemble of Autoencoders for Online Network Intrusion Detection," in *Proc. NDSS*, 2018.
+11. H. Shapoorifard and P. Shamsinejad, "Intrusion Detection Using a Novel Hybrid Method Incorporating an Improved KNN," *Int. Journal of Computer Applications*, vol. 173, no. 1, 2017.
+12. F. Chollet, *Deep Learning with Python*. Manning Publications, 2017.
 
 ---
 
@@ -257,3 +360,4 @@ This project is licensed under the MIT License.
 ---
 
 *Mini Project 3 — Deep Learning for Cybersecurity*
+*Tools: Python · TensorFlow · Keras · Scikit-learn · Streamlit · Google Colab · BoT-IoT Dataset*
