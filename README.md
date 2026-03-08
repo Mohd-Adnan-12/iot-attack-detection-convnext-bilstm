@@ -171,7 +171,7 @@ drate
 ```
 iot-attack-detection-convnext-bilstm/
 │
-├── Mini_Project_3_2__1_.ipynb     # Google Colab training notebook
+├── iot_attack_detection_ConvNeXt_BiLSTM.ipynb     # Google Colab training notebook
 │                                  # (data loading, preprocessing,
 │                                  #  model training, saving)
 │
@@ -195,7 +195,7 @@ iot-attack-detection-convnext-bilstm/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/iot-attack-detection-convnext-bilstm.git
+git clone https://github.com/Mohd-Adnan-12/iot-attack-detection-convnext-bilstm.git
 cd iot-attack-detection-convnext-bilstm
 ```
 
@@ -214,7 +214,7 @@ Download these two files and place them in the project folder:
 ## 🚀 Usage
 
 ### Step 1 — Train the Model (Google Colab)
-Open `Mini_Project_3_2__1_.ipynb` in Google Colab and run all cells.
+Open `iot_attack_detection_ConvNeXt_BiLSTM.ipynb` in Google Colab and run all cells.
 
 ```python
 # The notebook will:
